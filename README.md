@@ -1,17 +1,64 @@
-# lembrei
+# 📌 Lembrei
 
-A new Flutter project.
+Aplicativo simples para registrar e organizar lembretes do dia a dia, ajudando a não esquecer compromissos, tarefas e ideias importantes.
 
-## Getting Started
+## ✨ Funcionalidades
 
-This project is a starting point for a Flutter application.
+- ✅ Criar, editar e excluir lembretes
+- 📅 Organizar por data e categoria
+- 🔔 Notificações de lembretes próximos
+- 🌙 Interface simples e intuitiva
 
-A few resources to get you started if this is your first Flutter project:
+## 🛠️ Tecnologias
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- Python
+- Flask (ou o framework que você usou)
+- SQLite
+- HTML / CSS / JavaScript
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+> Ajuste essa lista conforme o que o seu projeto realmente usa.
+
+## 🚀 Como rodar o projeto
+
+Clone o repositório:
+
+```bash
+git clone https://github.com/isamedeirospassos/lembrei_app.git
+```
+
+Entre na pasta:
+
+```bash
+cd lembrei_app
+```
+
+Instale as dependências:
+
+```bash
+pip install -r requirements.txt
+```
+
+Execute:
+
+```bash
+python app.py
+```
+
+## 📂 Estrutura do projeto
+
+```
+lembrei_app/
+├── app.py
+├── templates/
+├── static/
+└── README.md
+```
+
+## 📌 Status do projeto
+
+🚧 Em desenvolvimento
+
+## 👩‍💻 Autora
+
+Feito com 💜 por [Isabella Medeiros Passos](https://github.com/isamedeirospassos)
+```
