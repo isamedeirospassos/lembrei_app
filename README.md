@@ -91,7 +91,10 @@ SUPABASE_URL=sua_url_aqui
 SUPABASE_ANON_KEY=sua_chave_aqui
 ```
 
-```- Configure o Supabase
+Configure o Supabase
+
+```bash
+- Configure o Supabase
 - Crie a tabela lembretes (estrutura acima)
 - Habilite Anonymous Sign-ins em Authentication → Providers
 - Configure as políticas RLS com user_id = auth.uid()
