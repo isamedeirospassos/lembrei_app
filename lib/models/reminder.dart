@@ -116,6 +116,9 @@ class Reminder {
     );
   }
 
+  // ============================================
+  // 💾 JSON local (SharedPreferences) - mantido por compatibilidade
+  // ============================================
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -138,5 +141,42 @@ class Reminder {
       recurrence: RecurrenceType.values[json['recurrence'] ?? 0],
       isCompleted: json['isCompleted'] ?? false,
     );
+  }
+
+  // ============================================
+  // ☁️ SUPABASE - conversão pra/de
+  // ============================================
+  Map<String, dynamic> toSupabase() {
+    return {
+      'id': id,
+      'titulo': title,
+      'descricao': description,
+      'data_hora': dateTime.toIso8601String(),
+      'categoria': category.name, // salva o nome do enum (ex: "medication")
+      'recorrencia': recurrence.index,
+      'concluido': isCompleted,
+    };
+  }
+
+  factory Reminder.fromSupabase(Map<String, dynamic> json) {
+    return Reminder(
+      id: json['id'].toString(),
+      title: json['titulo'] ?? '',
+      description: json['descricao'],
+      dateTime: DateTime.parse(json['data_hora']),
+      category: _parseCategoria(json['categoria']),
+      recurrence: RecurrenceType.values[json['recorrencia'] ?? 0],
+      isCompleted: json['concluido'] ?? false,
+    );
+  }
+
+  static CategoryType _parseCategoria(dynamic value) {
+    if (value == null) return CategoryType.other;
+    final str = value.toString();
+    try {
+      return CategoryType.values.firstWhere((c) => c.name == str);
+    } catch (_) {
+      return CategoryType.other; // fallback se vier algo desconhecido
+    }
   }
 }

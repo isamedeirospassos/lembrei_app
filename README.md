@@ -1,35 +1,48 @@
 # 📌 Lembrei
 
-Aplicativo mobile inteligente desenvolvido em **Flutter** para criar lembretes contextuais usando linguagem natural, geolocalização e IA.
+Aplicativo mobile desenvolvido em Flutter para criar e gerenciar lembretes de forma simples, bonita e personalizável — com sincronização em nuvem, notificações locais e widget na tela inicial. ✨
 
-Em vez de só agendar por horário, o Lembrei entende frases como *"me lembra de levar o carregador quando eu sair de casa"* e aciona o lembrete no momento certo. 🧠✨
+## 🎯 Sobre o projeto
+
+O Lembrei nasceu com a proposta de ser um app de lembretes leve, com identidade visual marcante (tipografia Special Elite + tema rosa) e uma experiência que vai além do básico: tem temas customizáveis, modo escuro, widget nativo no Android, sincronização em nuvem e organização por categorias.
+
+Uma versão funcional, polida e pronta para uso no dia a dia. 💜
 
 ## ✨ Funcionalidades
 
-- 🗣️ Criação de lembretes em **linguagem natural**
-- 📅 Lembretes por **data e hora**
-- 📍 Lembretes por **localização** (chegou/saiu de um lugar)
-- 🧠 Classificação automática com **IA** (prioridade, tags, contexto)
-- 🔁 Lembretes **recorrentes** (diário, semanal)
-- 😴 Função **soneca** (snooze)
-- 🔐 Autenticação segura de usuários
+- 📝 Criação, edição e exclusão de lembretes
+- ⏰ Lembretes por horário + dias da semana ou data específica
+- 🏷️ Categorias customizáveis (nome, cor e ícone)
+- ✅ Marcar como concluído sem perder da lista
+- 🗑️ Histórico de concluídos e excluídos (com restauração)
+- 🔔 Notificações locais agendadas
+- 📲 Widget na tela inicial com os lembretes do dia
+- ⚠️ Indicador visual de lembretes atrasados
+- 🔍 Busca e filtros por categoria e status
+- 📊 Tela de estatísticas de produtividade
+- 🎨 Vários temas visuais + modo claro/escuro
+- ☁️ Sincronização em nuvem com Supabase
+- 💾 Cache offline com SharedPreferences
 - ☁️ Sincronização em nuvem em tempo real
 
 ## 🛠️ Tecnologias utilizadas
 
 ### Frontend
-- [Flutter](https://flutter.dev/) - Framework de desenvolvimento mobile
-- [Dart](https://dart.dev/) - Linguagem de programação
+
+- Flutter — framework mobile
+- Dart — linguagem de programação
+- Provider — gerenciamento de estado
+- Google Fonts — tipografia personalizada
+- home_widget — widget na home do Android
+- flutter_local_notifications — notificações locais
+- shared_preferences — armazenamento local
 
 ### Backend & Banco de Dados
-- [Supabase](https://supabase.com/) - Backend as a Service
-- **PostgreSQL** - Banco de dados relacional
-- **PostGIS** - Extensão para dados geoespaciais
-- **SQL** - Migrations, triggers, índices e políticas RLS
 
-### Segurança
-- **Row Level Security (RLS)** - Cada usuário acessa apenas seus próprios dados
-- **Supabase Auth** - Autenticação de usuários
+- Supabase — Backend as a Service
+- PostgreSQL — banco de dados relacional
+- Supabase Auth — autenticação anônima por dispositivo
+- Row Level Security (RLS) — cada usuário acessa apenas seus próprios dados
 
 ## 📱 Plataforma
 
@@ -78,13 +91,18 @@ SUPABASE_URL=sua_url_aqui
 SUPABASE_ANON_KEY=sua_chave_aqui
 ```
 
-Execute as migrations SQL no painel do Supabase (arquivo `supabase/migrations/001_initial.sql`).
+```- Configure o Supabase
+- Crie a tabela lembretes (estrutura acima)
+- Habilite Anonymous Sign-ins em Authentication → Providers
+- Configure as políticas RLS com user_id = auth.uid()
+```
 
 Rode o app no Android:
 
 ```bash
 flutter run
 ```
+
 
 ## 📌 Status do projeto
 
@@ -93,3 +111,7 @@ flutter run
 ## 👩‍💻 Autora
 
 Feito com 💜 por [Isabella Medeiros Passos](https://github.com/isamedeirospassos)
+
+## 📄 Licença
+
+Este projeto é de uso pessoal e está disponível para fins de estudo.

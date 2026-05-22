@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/notification_service.dart';
 import '../services/category_service.dart';
+import '../services/lembrete_service.dart';
 import '../theme/app_theme.dart';
 import 'add_reminder_screen.dart';
 import 'edit_reminder_screen.dart';
@@ -148,6 +149,24 @@ class _HomePageState extends State<HomePage> {
   //  DADOS
   // ════════════════════════════════════════════════════════
   Future<void> _carregar() async {
+    // 1️⃣ Tenta carregar da NUVEM primeiro (Supabase)
+    final dadosNuvem = await LembreteService.carregarLembretes();
+
+    if (dadosNuvem.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _lembretes = dadosNuvem;
+          _ordenar();
+        });
+      }
+      // Salva localmente também (cache offline)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('lembretes', jsonEncode(_lembretes));
+      print('☁️ Carregado da nuvem: ${_lembretes.length} lembretes');
+      return;
+    }
+
+    // 2️⃣ Se nuvem vazia ou sem internet, usa cache local
     final prefs = await SharedPreferences.getInstance();
     final dados = prefs.getString('lembretes');
     if (dados != null) {
@@ -158,6 +177,7 @@ class _HomePageState extends State<HomePage> {
           _ordenar();
         });
       }
+      print('📱 Carregado do cache local: ${_lembretes.length} lembretes');
     }
   }
 
@@ -179,30 +199,54 @@ class _HomePageState extends State<HomePage> {
 
   bool _estaAtrasado(Map<String, dynamic> l) {
     if (l['concluido'] == true) return false;
+
     final horario = l['horario'] as String? ?? '00:00';
-    final dias = List<String>.from(l['dias'] ?? []);
+    final partes = horario.split(':');
+    final h = int.tryParse(partes[0]) ?? 0;
+    final m = int.tryParse(partes[1]) ?? 0;
     final agora = DateTime.now();
+
+    // ─── 1️⃣ DATA ESPECÍFICA ───
+    final dataEsp = l['dataEspecifica'] as String?;
+    if (dataEsp != null && dataEsp.isNotEmpty) {
+      try {
+        final dataLembrete = DateTime.parse(dataEsp);
+        final horaLembrete = DateTime(
+          dataLembrete.year,
+          dataLembrete.month,
+          dataLembrete.day,
+          h,
+          m,
+        );
+        final atrasado = agora.isAfter(horaLembrete);
+        print('🔍 ${l['titulo']} | data específica: $dataEsp | ${atrasado ? "⚠️ ATRASADO" : "✅ no prazo"}');
+        return atrasado;
+      } catch (e) {
+        print('❌ Erro ao parsear data específica: $e');
+        return false;
+      }
+    }
+
+    // ─── 2️⃣ DIAS DA SEMANA ───
+    final dias = List<String>.from(l['dias'] ?? []);
     final diaSemana = ['seg','ter','qua','qui','sex','sáb','dom'][agora.weekday - 1];
 
     print('🔍 ${l['titulo']} | dias: $dias | hoje: $diaSemana | horario: $horario');
 
+    // se não tem dias E não tem data → considera "todo dia"
     final ehHoje = dias.isEmpty || dias.any((d) => d.toLowerCase().startsWith(diaSemana));
     if (!ehHoje) {
       print('   ❌ não é hoje');
       return false;
     }
 
-    final partes = horario.split(':');
-    final h = int.tryParse(partes[0]) ?? 0;
-    final m = int.tryParse(partes[1]) ?? 0;
     final horaLembrete = DateTime(agora.year, agora.month, agora.day, h, m);
-
     final atrasado = agora.isAfter(horaLembrete);
     print('   ${atrasado ? "⚠️ ATRASADO" : "✅ no prazo"}');
     return atrasado;
   }
 
-  Future<void> _salvar() async {
+  Future<void> _salvarCacheLocal() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('lembretes', jsonEncode(_lembretes));
   }
@@ -243,34 +287,76 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _toggleConcluido(int index) async {
-    setState(() {
-      _lembretes[index]['concluido'] = !(_lembretes[index]['concluido'] ?? false);
-      _ordenar();
-    });
-    await _salvar();
+    final lembrete = _lembretes[index];
+    final id = lembrete['id']?.toString();
+    final estaConcluido = lembrete['concluido'] == true;
+
+    if (id == null) return;
+
+    if (!estaConcluido) {
+      await LembreteService.marcarComoConcluido(id);
+      final notifId = lembrete['id'] is int ? lembrete['id'] as int : 0;
+      await NotificationService().cancelarNotificacao(notifId);
+      setState(() {
+        _lembretes[index]['concluido'] = true;  // ← só marca, NÃO remove
+        _ordenar();
+      });
+    } else {
+      await LembreteService.restaurarLembrete(id);
+      setState(() {
+        _lembretes[index]['concluido'] = false;
+        _ordenar();
+      });
+    }
+
+    await _salvarCacheLocal();
     await _atualizarWidget();
   }
 
   Future<void> _deletar(int index) async {
-    final id = _lembretes[index]['id'] as int? ?? 0;
-    await NotificationService().cancelarNotificacao(id);
+    final lembrete = _lembretes[index];
+    final id = lembrete['id']?.toString();
+    final notifId = lembrete['id'] is int ? lembrete['id'] as int : 0;
+
+    if (id == null) return;
+
+    await NotificationService().cancelarNotificacao(notifId);
+    await LembreteService.marcarComoExcluido(id);
+
     setState(() => _lembretes.removeAt(index));
-    await _salvar();
+    await _salvarCacheLocal();
     await _atualizarWidget();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('lembrete movido pro histórico 🗑️',
+              style: GoogleFonts.specialElite()),
+          backgroundColor: Colors.grey[800],
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _limparConcluidos() async {
-    for (final l in _lembretes.where((l) => l['concluido'] == true).toList()) {
-      final id = l['id'] as int? ?? 0;
-      await NotificationService().cancelarNotificacao(id);
+    final concluidos = _lembretes.where((l) => l['concluido'] == true).toList();
+    for (final l in concluidos) {
+      final notifId = l['id'] is int ? l['id'] as int : 0;
+      final idStr = l['id']?.toString();
+      await NotificationService().cancelarNotificacao(notifId);
+      if (idStr != null) {
+        // 👇 Agora SIM vai pro histórico (muda status)
+        await LembreteService.marcarComoExcluido(idStr);
+      }
     }
     setState(() => _lembretes.removeWhere((l) => l['concluido'] == true));
-    await _salvar();
+    await _salvarCacheLocal();
     await _atualizarWidget();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('concluídos removidos!', style: GoogleFonts.specialElite()),
+          content: Text('movidos pro histórico!', style: GoogleFonts.specialElite()),
           backgroundColor: Colors.green[700],
           duration: const Duration(seconds: 2),
         ),
@@ -299,7 +385,7 @@ class _HomePageState extends State<HomePage> {
             style: GoogleFonts.specialElite(
                 color: _txtPrimary, fontWeight: FontWeight.bold)),
         content: Text(
-          'remover $qtd lembrete${qtd > 1 ? 's' : ''} concluído${qtd > 1 ? 's' : ''}?\nessa ação não pode ser desfeita.',
+          'mover $qtd lembrete${qtd > 1 ? 's' : ''} concluído${qtd > 1 ? 's' : ''} pro histórico?',
           style: GoogleFonts.specialElite(color: _txtSecond),
         ),
         actions: [
@@ -317,8 +403,8 @@ class _HomePageState extends State<HomePage> {
               Navigator.pop(ctx);
               _limparConcluidos();
             },
-            child: Text('remover',
-                style: GoogleFonts.specialElite(color: Colors.white)),
+            child: Text('mover',
+              style: GoogleFonts.specialElite(color: Colors.white)),
           ),
         ],
       ),
@@ -331,22 +417,30 @@ class _HomePageState extends State<HomePage> {
       MaterialPageRoute(builder: (_) => const AddReminderScreen()),
     );
     if (resultado != null) {
-      final id = DateTime.now().millisecondsSinceEpoch % 100000;
+      final notifId = DateTime.now().millisecondsSinceEpoch % 100000;
       final partes = (resultado['horario'] as String).split(':');
-      setState(() {
-        _lembretes.add({...resultado, 'id': id, 'concluido': false});
-        _ordenar();
+
+      final lembreteCriado = await LembreteService.adicionarLembrete({
+        ...resultado,
+        'concluido': false,
       });
-      await _salvar();
-      await _atualizarWidget();
-      await NotificationService().agendarNotificacao(
-        id: id,
-        titulo: resultado['titulo'],
-        corpo: 'lembrete: ${resultado['titulo']}',
-        hora: int.tryParse(partes[0]) ?? 0,
-        minuto: int.tryParse(partes[1]) ?? 0,
-        dias: List<String>.from(resultado['dias'] ?? []),
-      );
+
+      if (lembreteCriado != null) {
+        setState(() {
+          _lembretes.add(lembreteCriado);
+          _ordenar();
+        });
+        await _salvarCacheLocal();
+        await _atualizarWidget();
+        await NotificationService().agendarNotificacao(
+          id: notifId,
+          titulo: resultado['titulo'],
+          corpo: 'lembrete: ${resultado['titulo']}',
+          hora: int.tryParse(partes[0]) ?? 0,
+          minuto: int.tryParse(partes[1]) ?? 0,
+          dias: List<String>.from(resultado['dias'] ?? []),
+        );
+      }
     }
   }
 
